@@ -10,7 +10,6 @@ router.post("/", async (req, res) => {
     const token = await user.generateAuthToken();
     res.status(201).send({ user, token });
   } catch (error) {
-    console.log(error);
     let msg;
     if (error.code == 11000) {
       msg = "Email already exists";

@@ -44,20 +44,30 @@ router.get("/:id", async (req, res) => {
     res.status(400).json("Not Found");
   }
 });
-router.delete("/:id",authUser,async(req,res)=>{
-  const {id} = req.params;
-  try{
-    const article= await BlogPost.findById(id);
-    if(article.creator.toString() === req.user._id.toString() ){
+router.delete("/:id", authUser, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const article = await BlogPost.findById(id);
+    if (article.creator.toString() === req.user._id.toString()) {
       await article.remove();
       res.status(200).json("Removed Successfully");
-    }
-    else {
+    } else {
       res.status(401).json("You are not authorized to delete");
     }
-  }catch(e){
+  } catch (e) {
     res.status(400).send(e.message);
   }
-})
+});
+
+router.patch("/:id", authUser, async (req, res) => {
+  const { id } = req.params;
+  const { title, content } = req.body;
+  try {
+    const article = await BlogPost.findByIdAndUpdate(id, { title, content });
+    res.status(200).json("update with success");
+  } catch (e) {
+    res.status(401).send(e.message);
+  }
+});
 
 module.exports = router;
