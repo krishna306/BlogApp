@@ -1,10 +1,10 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+import { verify } from "jsonwebtoken";
+import { findOne } from "../models/User";
 const authUser = async (req, res, next) => {
   try {
     const token = req.header("Authorization").replace("Bearer ", "");
-    const decoded = jwt.verify(token, process.env.SECRETKEY);
-    const user = await User.findOne({ _id: decoded._id });
+    const decoded = verify(token, process.env.SECRETKEY);
+    const user = await findOne({ _id: decoded._id });
     if (!user) {
       throw new Error("Please Authenticate");
     }
@@ -38,4 +38,4 @@ const authUser = async (req, res, next) => {
 //     }
 // }
 
-module.exports = { authUser };
+export default { authUser };
