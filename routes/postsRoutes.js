@@ -1,6 +1,6 @@
 const router = require("express").Router();
 const BlogPost = require("../models/BlogPost");
-const { authUser } = require("../middleware/auth").default;
+const { authUser } = require("../middleware/auth");
 
 router.post("/", authUser, async (req, res) => {
   try {

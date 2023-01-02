@@ -1,5 +1,5 @@
-import { verify } from "jsonwebtoken";
-import { findOne } from "../models/User";
+const { verify } = require("jsonwebtoken");
+const { findOne } =require("../models/User");
 const authUser = async (req, res, next) => {
   try {
     const token = req.header("Authorization").replace("Bearer ", "");
@@ -38,4 +38,4 @@ const authUser = async (req, res, next) => {
 //     }
 // }
 
-export default { authUser };
+module.exports = { authUser };

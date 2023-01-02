@@ -18,3 +18,6 @@ const port =  process.env.PORT || 8000;
 app.listen(port,function(){
     console.log(`Server Running on Port ${port}`);
 });
+app.get("/",(req,res)=>{
+    res.send("Running");
+})
