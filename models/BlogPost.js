@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const dateOptions = {
   weekday: "long",
   year: "numeric",
@@ -32,4 +32,4 @@ const BlogPostSchema = new mongoose.Schema({
   },
 });
 const BlogPost = mongoose.model("BlogPost", BlogPostSchema);
-module.exports = BlogPost;
+export default BlogPost;

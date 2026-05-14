@@ -1,7 +1,9 @@
-const router = require("express").Router();
-const BlogPost = require("../models/BlogPost");
-const { authUser } = require("../middleware/auth");
-
+import express from "express";
+import BlogPost from "../models/BlogPost.js";
+import authUser from "../middleware/auth.js";
+import { delCache, getCache, setCache } from "../resdiswarpper/rediswrapper.js";
+import cacheKeys from "../resdiswarpper/rediskeys.js";
+const router = express.Router();
 router.post("/", authUser, async (req, res) => {
   try {
     const { title, content, image } = req.body;
@@ -12,6 +14,7 @@ router.post("/", authUser, async (req, res) => {
       creator: req.user._id,
     });
     req.user.articles.push(article._id);
+    await delCache(cacheKeys.postsAll())
     await req.user.save();
     res.status(201).json(article);
   } catch (e) {
@@ -20,7 +23,13 @@ router.post("/", authUser, async (req, res) => {
 });
 router.get("/", async (req, res) => {
   try {
-    const posts = await BlogPost.find();
+    const allpost = await getCache(cacheKeys.postsAll());
+    if (allpost) {
+      res.json(allpost);
+      return;
+    }
+    const posts = await BlogPost.find().lean();
+    await setCache(cacheKeys.postsAll(),600,posts);
     res.json(posts);
   } catch (error) {
     res.status(400).json(error.message);
@@ -29,17 +38,34 @@ router.get("/", async (req, res) => {
 router.get("/me", authUser, async (req, res) => {
   try {
     const user = req.user;
-    user.populate("articles").then(({ articles }) => res.json(articles));
+    const allArticles = await getCache(cacheKeys.postsByUser(user._id));
+    if(allArticles){
+      res.json(allArticles);
+      return;
+    }
+    // await user.populate("articles")
+    const articles = await BlogPost.find({author : user._id}).lean();
+    await setCache(cacheKeys.postsByUser(user._id), 600, articles);
+    res.json(articles);
+    // });
   } catch (error) {
     console.log(error);
-    res.status(400).json(e.message);
+    res.status(400).json(error.message);
   }
 });
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
+    const postbyid = await getCache(cacheKeys.postById(id));
+    if(postbyid){
+      res.json(postbyid);
+      return;
+    }
     const article = await BlogPost.findById(id);
-    article.populate("creator").then((result) => res.json(result));
+    article.populate("creator").then(async (result) =>  {
+      await setCache(cacheKeys.postById(id),600,result);
+      res.json(result);
+    });
   } catch (error) {
     res.status(400).json("Not Found");
   }
@@ -50,6 +76,7 @@ router.delete("/:id", authUser, async (req, res) => {
     const article = await BlogPost.findById(id);
     if (article.creator.toString() === req.user._id.toString()) {
       await article.remove();
+      await delCache(cacheKeys.postsAll())
       res.status(200).json("Removed Successfully");
     } else {
       res.status(401).json("You are not authorized to delete");
@@ -64,10 +91,11 @@ router.patch("/:id", authUser, async (req, res) => {
   const { title, content } = req.body;
   try {
     const article = await BlogPost.findByIdAndUpdate(id, { title, content });
+    await delCache(cacheKeys.postsAll());
+    await delCache(cacheKeys.postById(id));
     res.status(200).json("update with success");
   } catch (e) {
     res.status(401).send(e.message);
   }
 });
-
-module.exports = router;
+export default router
