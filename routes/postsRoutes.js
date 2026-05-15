@@ -18,7 +18,7 @@ router.post("/", authUser, async (req, res) => {
     user.articles.push(article._id);
     await user.save();
     await delCache(cacheKeys.postsAll());
-    await delCache(cacheKeys.user(user._id));
+    await delCache(cacheKeys.postsByUser(req.user._id));
     res.status(201).json(article);
   } catch (e) {
     res.status(400).json(e.message);
