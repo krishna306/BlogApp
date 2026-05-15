@@ -10,6 +10,7 @@ router.post("/", async (req, res) => {
   try {
     const user = await User.create({ email, password });
     const token = await user.generateAuthToken();
+    await delCache(cacheKeys.user(req.user._id));
     res.status(201).send({ user, token });
   } catch (error) {
     let msg;
