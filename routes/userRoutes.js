@@ -1,6 +1,8 @@
 import express from "express";
 import User from  "../models/User.js";
 import authUser from "../middleware/auth.js";
+import { delCache } from "../resdiswarpper/rediswrapper.js";
+import cacheKeys from "../resdiswarpper/rediskeys.js";
 // User creation
 const router = express.Router();
 router.post("/", async (req, res) => {
@@ -40,6 +42,7 @@ router.delete("/logout", authUser, async (req, res) => {
       return tokenObj.token !== req.token;
     });
     await req.user.save();
+    await delCache(cacheKeys.user(req.user._id));
     res.status(200).send();
   } catch (e) {
     res.status(400).json(e.message);

@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import  "../connection.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { setCache } from "../resdiswarpper/rediswrapper.js";
+import cacheKeys from "../resdiswarpper/rediskeys.js";
 const userSchema = new mongoose.Schema({
   firstname: String,
   lastname: String,
@@ -32,12 +34,11 @@ const userSchema = new mongoose.Schema({
     },
   ],
 });
-userSchema.pre("save", function (next) {
+userSchema.pre("save", async function () {
   var salt = bcrypt.genSaltSync(10);
   if (this.password && this.isModified("password")) {
     this.password = bcrypt.hashSync(this.password, salt);
   }
-  next();
 });
 
 userSchema.methods.toJSON = function () {
@@ -57,6 +58,11 @@ userSchema.methods.generateAuthToken = async function () {
   var tokenValue = jwt.sign(params, key);
   this.tokens = this.tokens.concat({ token: tokenValue });
   await this.save();
+  try {
+    await setCache(cacheKeys.user(this._id), 3600, this.toObject());
+  } catch (err) {
+    console.error("Failed to update user cache:", err.message);
+  }
   return tokenValue;
 };
 

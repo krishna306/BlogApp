@@ -1,5 +1,6 @@
 import express from "express";
 import BlogPost from "../models/BlogPost.js";
+import User from "../models/User.js";
 import authUser from "../middleware/auth.js";
 import { delCache, getCache, setCache } from "../resdiswarpper/rediswrapper.js";
 import cacheKeys from "../resdiswarpper/rediskeys.js";
@@ -13,9 +14,11 @@ router.post("/", authUser, async (req, res) => {
       image,
       creator: req.user._id,
     });
-    req.user.articles.push(article._id);
-    await delCache(cacheKeys.postsAll())
-    await req.user.save();
+    const user = await User.findById(req.user._id);
+    user.articles.push(article._id);
+    await user.save();
+    await delCache(cacheKeys.postsAll());
+    await delCache(cacheKeys.user(user._id));
     res.status(201).json(article);
   } catch (e) {
     res.status(400).json(e.message);
@@ -44,7 +47,7 @@ router.get("/me", authUser, async (req, res) => {
       return;
     }
     // await user.populate("articles")
-    const articles = await BlogPost.find({author : user._id}).lean();
+    const articles = await BlogPost.find({creator : user._id}).lean();
     await setCache(cacheKeys.postsByUser(user._id), 600, articles);
     res.json(articles);
     // });
@@ -61,11 +64,9 @@ router.get("/:id", async (req, res) => {
       res.json(postbyid);
       return;
     }
-    const article = await BlogPost.findById(id);
-    article.populate("creator").then(async (result) =>  {
-      await setCache(cacheKeys.postById(id),600,result);
-      res.json(result);
-    });
+    const article = await BlogPost.findById(id).populate("creator");
+    await setCache(cacheKeys.postById(id),600,article);
+    res.json(article);
   } catch (error) {
     res.status(400).json("Not Found");
   }
@@ -75,8 +76,10 @@ router.delete("/:id", authUser, async (req, res) => {
   try {
     const article = await BlogPost.findById(id);
     if (article.creator.toString() === req.user._id.toString()) {
-      await article.remove();
+      await BlogPost.findByIdAndDelete(id);
       await delCache(cacheKeys.postsAll())
+      await delCache(cacheKeys.postById(id))
+      await delCache(cacheKeys.postsByUser(req.user._id))
       res.status(200).json("Removed Successfully");
     } else {
       res.status(401).json("You are not authorized to delete");
