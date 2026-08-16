@@ -3,16 +3,37 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// mongoose connection for local database
-// mongoose.connect("mongodb://localhost:27017/blogpost")
-// .then(console.log("connected to Database"))
-// .catch((err) => console.log(err));
-// Database connection for mongodb atlas
-const uri = process.env.MongoURL;
-mongoose.connect(uri)
-  .then(() => {
-    console.log("Connected to Database");
-  })
-  .catch((err) => console.log(err));
+function mongoUri() {
+  return String(process.env.MongoURL || "")
+    .trim()
+    .replace(/^[`'"]+|[`'"]+$/g, "");
+}
+
+export async function connectDB() {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+  const uri = mongoUri();
+  if (!uri) {
+    throw new Error("MongoURL is missing");
+  }
+  await mongoose.connect(uri, {
+    serverSelectionTimeoutMS: 20000,
+    maxPoolSize: 10,
+  });
+  return mongoose.connection;
+}
+
+mongoose.connection.on("connected", () => {
+  console.log("Connected to Database");
+});
+
+mongoose.connection.on("disconnected", () => {
+  console.error("MongoDB disconnected");
+});
+
+mongoose.connection.on("error", (err) => {
+  console.error("MongoDB error:", err.message);
+});
 
 export default mongoose;

@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import  "../connection.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { setCache } from "../resdiswarpper/rediswrapper.js";
