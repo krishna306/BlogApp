@@ -52,14 +52,8 @@ function paginatedPayload({ docs, total, page, limit, skip }) {
 
 async function invalidatePostListCaches(userId) {
   await Promise.all([
-    delCache(cacheKeys.postsAll()),
     delCachePattern("posts:page:*"),
-    userId
-      ? Promise.all([
-          delCache(cacheKeys.postsByUser(userId)),
-          delCachePattern(`posts:user:${userId}:*`),
-        ])
-      : Promise.resolve(),
+    userId ? delCachePattern(`posts:user:${userId}:*`) : Promise.resolve(),
   ]);
 }
 
@@ -146,7 +140,11 @@ router.get("/:id", async (req, res) => {
       return;
     }
     const article = await BlogPost.findById(id).populate("creator");
-    await setCache(cacheKeys.postById(id),600,article);
+    if (!article) {
+      res.status(404).json("Not Found");
+      return;
+    }
+    await setCache(cacheKeys.postById(id), 600, article);
     res.json(article);
   } catch (error) {
     res.status(400).json("Not Found");

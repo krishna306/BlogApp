@@ -55,11 +55,13 @@ userSchema.methods.generateAuthToken = async function () {
     email: this.email,
   };
   const key = process.env.SECRETKEY;
-  var tokenValue = jwt.sign(params, key);
+  var tokenValue = jwt.sign(params, key, { expiresIn: "7d" });
   this.tokens = this.tokens.concat({ token: tokenValue });
   await this.save();
   try {
-    await setCache(cacheKeys.user(this._id), 3600, this.toObject());
+    const cached = this.toObject();
+    delete cached.password;
+    await setCache(cacheKeys.user(this._id), 3600, cached);
   } catch (err) {
     console.error("Failed to update user cache:", err.message);
   }

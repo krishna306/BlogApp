@@ -1,7 +1,18 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { createClient } from "redis";
 
 const redisClient = createClient({
-  url: process.env.REDIS_URL, // e.g. Upstash / local redis
+  url: process.env.REDIS_URL,
+  commandTimeout: 2000,
+  socket: {
+    connectTimeout: 3000,
+    reconnectStrategy(retries) {
+      if (retries > 10) return new Error("Redis reconnect limit");
+      return Math.min(retries * 200, 2000);
+    },
+  },
 });
 
 redisClient.on("connect", () => {
@@ -9,9 +20,13 @@ redisClient.on("connect", () => {
 });
 
 redisClient.on("error", (err) => {
-  console.error("❌ Redis error", err);
+  console.error("❌ Redis error", err.message);
 });
 
-await redisClient.connect();
+try {
+  await redisClient.connect();
+} catch (err) {
+  console.error("Redis unavailable, continuing without cache:", err.message);
+}
 
 export default redisClient;

@@ -1,32 +1,43 @@
-import jwt  from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { getCache, setCache } from "../resdiswarpper/rediswrapper.js";
-import cacheKeys  from "../resdiswarpper/rediskeys.js";
+import cacheKeys from "../resdiswarpper/rediskeys.js";
+
+function hasToken(user, token) {
+  return Boolean(user?.tokens?.some((item) => item.token === token));
+}
+
 const authUser = async (req, res, next) => {
   try {
-    const token = req.header("Authorization").replace("Bearer ", "");
+    const header = req.header("Authorization");
+    const token = header?.replace("Bearer ", "");
     if (!token) {
       return res.status(401).json({ message: "Bad Access" });
     }
-    const decoded = jwt.verify(token, process.env.SECRETKEY);
 
-    const userID = decoded._id
+    if (await getCache(cacheKeys.blacklistToken(token))) {
+      return res.status(401).json({ error: "Please Authenticate" });
+    }
+
+    const decoded = jwt.verify(token, process.env.SECRETKEY);
+    const userID = decoded._id;
     const cachedUser = await getCache(cacheKeys.user(userID));
-    if (cachedUser) {
-      // hydrate cached plain object into a mongoose document so routes can call document methods
+    if (cachedUser && hasToken(cachedUser, token)) {
       req.user = User.hydrate(cachedUser);
       req.token = token;
       return next();
     }
-    const user = await User.findOne({ _id: decoded._id });
+
+    const user = await User.findOne({
+      _id: decoded._id,
+      "tokens.token": token,
+    });
     if (!user) {
       throw new Error("Please Authenticate");
     }
-    await setCache(
-      cacheKeys.user(userID),
-      3600,
-      user.toObject()
-    );
+    const cached = user.toObject();
+    delete cached.password;
+    await setCache(cacheKeys.user(userID), 3600, cached);
     req.token = token;
     req.user = user;
     return next();
