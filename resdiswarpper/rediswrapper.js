@@ -25,3 +25,14 @@ export const delCache = async (key) => {
     console.error("Redis DEL error:", err.message);
   }
 };
+
+export const delCachePattern = async (pattern) => {
+  try {
+    const keys = await redisClient.keys(pattern);
+    if (keys.length > 0) {
+      await redisClient.del(keys);
+    }
+  } catch (err) {
+    console.error("Redis DEL pattern error:", err.message);
+  }
+};
