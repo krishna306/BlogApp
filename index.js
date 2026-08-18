@@ -7,6 +7,7 @@ import mongoose from "mongoose";
 import { connectDB } from "./connection.js";
 import userRoutes from "./routes/userRoutes.js";
 import postRoutes from "./routes/postsRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 await connectDB();
 
@@ -29,6 +30,7 @@ app.get("/", (req, res) => {
 });
 app.use("/users", userRoutes);
 app.use("/posts", postRoutes);
+app.use("/admin", adminRoutes);
 
 const port = process.env.PORT || 8080;
 if (!process.env.VERCEL) {
